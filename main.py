@@ -37,7 +37,9 @@ def get_key_sound(
     key_code: int, sound_files: Dict[str, pygame.mixer.Sound]
 ) -> pygame.mixer.Sound:
     """Return a deterministic sound for the given key using its scan code."""
-    sound_list = list(sound_files.values())
+    sound_list = [
+        sound_files[s] for s in sound_files.keys() if not s.startswith("spacebar")
+    ]
     random.seed(key_code)
     return random.choice(sound_list)
 
