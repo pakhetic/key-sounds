@@ -8,7 +8,7 @@ from typing import Dict
 pygame.mixer.init()
 
 
-def load_sounds(set_name: str) -> Dict[str, pygame.mixer.Sound]:
+def load_sounds(set_name: str, volume: float = 1.0) -> Dict[str, pygame.mixer.Sound]:
     """Load all .mp3 and .wav files from the selected sound set into memory."""
     sound_folder = os.path.join("sounds", set_name)
     if not os.path.isdir(sound_folder):
@@ -20,6 +20,7 @@ def load_sounds(set_name: str) -> Dict[str, pygame.mixer.Sound]:
         if filename.endswith((".mp3", ".wav")):
             sound_path = os.path.join(sound_folder, filename)
             sound_files[filename] = pygame.mixer.Sound(sound_path)
+            sound_files[filename].set_volume(volume)
     return sound_files
 
 
@@ -56,7 +57,11 @@ def main() -> None:
         print("Error: No sound set provided. Usage: sudo python main.py <set_name>")
         sys.exit(1)
 
-    sound_files = load_sounds(set_name)
+    volume = 1.0
+    if len(sys.argv) > 2:
+        volume = int(sys.argv[2]) / 100
+
+    sound_files = load_sounds(set_name, volume)
     spacebar_sound = get_spacebar_sound(sound_files)
 
     print(f"Loaded sound set: {set_name}")
