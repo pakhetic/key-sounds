@@ -1,9 +1,11 @@
 import os
-import pygame
-import keyboard
-import random
 import sys
+import time
+import random
 from typing import Dict
+
+import pygame
+from pynput import keyboard
 
 pygame.mixer.init()
 
@@ -24,14 +26,15 @@ def load_sounds(set_name: str, volume: float = 1.0) -> Dict[str, pygame.mixer.So
     return sound_files
 
 
-def get_spacebar_sound(
-    sound_files: Dict[str, pygame.mixer.Sound],
+def get_custom_sound(
+    sound_files: Dict[str, pygame.mixer.Sound], name: str
 ) -> pygame.mixer.Sound | None:
     """Return the spacebar sound if it exists, otherwise None."""
-    if "spacebar.mp3" in sound_files:
-        return sound_files["spacebar.mp3"]
-    if "spacebar.wav" in sound_files:
-        return sound_files["spacebar.wav"]
+    mp3, wav = f"{name}.mp3", f"{name}.wav"
+    if mp3 in sound_files:
+        return sound_files[mp3]
+    if wav in sound_files:
+        return sound_files[wav]
 
 
 def get_key_sound(
@@ -39,46 +42,47 @@ def get_key_sound(
 ) -> pygame.mixer.Sound:
     """Return a deterministic sound for the given key using its scan code."""
     sound_list = [
-        sound_files[s] for s in sound_files.keys() if not s.startswith("spacebar")
+        s for s in sound_files.keys() if not s.startswith(("spacebar", "non_default"))
     ]
     random.seed(key_code)
-    return random.choice(sound_list)
+    name = random.choice(sound_list)
+    return sound_files[name]
 
 
-def play_sound(sound: pygame.mixer.Sound) -> None:
-    """Plays the provided sound."""
-    sound.play()
+def on_press(key):
+    if hasattr(key, "name"):
+        if key.name == "space" and spacebar_sound:
+            spacebar_sound.play()
+            return
+        if key.name and non_default_sound:
+            non_default_sound.play()
+            return
+
+    if key.char:
+        get_key_sound(ord(key.char), sound_files).play()
 
 
-def main() -> None:
-    if len(sys.argv) > 1:
-        set_name = sys.argv[1]
-    else:
-        print("Error: No sound set provided. Usage: sudo python main.py <set_name>")
-        sys.exit(1)
-
-    volume = 1.0
-    if len(sys.argv) > 2:
-        volume = int(sys.argv[2]) / 100
-
-    sound_files = load_sounds(set_name, volume)
-    spacebar_sound = get_spacebar_sound(sound_files)
-
-    print(f"Loaded sound set: {set_name}")
-    prev = None
+def main():
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
     while True:
-        event = keyboard.read_event()
-        if event.event_type == keyboard.KEY_UP:
-            prev = None
-            continue
+        time.sleep(0.001)
 
-        if event.event_type == keyboard.KEY_DOWN and event.scan_code != prev:
-            prev = event.scan_code
-            if event.name == "space" and spacebar_sound:
-                play_sound(spacebar_sound)
-                continue
-            play_sound(get_key_sound(event.scan_code, sound_files))
 
+if len(sys.argv) > 1:
+    set_name = sys.argv[1]
+else:
+    print("Error: No sound set provided. Usage: sudo python main.py <set_name>")
+    sys.exit(1)
+
+volume = 1.0
+if len(sys.argv) > 2:
+    volume = int(sys.argv[2]) / 100
+
+sound_files = load_sounds(set_name, volume)
+spacebar_sound = get_custom_sound(sound_files, "spacebar")
+non_default_sound = get_custom_sound(sound_files, "non_default")
 
 if __name__ == "__main__":
+    print(f"Loaded sound set: {set_name}")
     main()
